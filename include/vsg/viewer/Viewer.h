@@ -12,14 +12,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/threading/Barrier.h>
+#include <vsg/threading/FrameBlock.h>
+#include <vsg/traversals/CompileTraversal.h>
 #include <vsg/viewer/Presentation.h>
 #include <vsg/viewer/RecordAndSubmitTask.h>
-#include <vsg/viewer/View.h>
 #include <vsg/viewer/Window.h>
-
-#include <vsg/traversals/CompileTraversal.h>
-#include <vsg/ui/ApplicationEvent.h>
-#include <vsg/vk/Context.h>
 
 #include <map>
 
@@ -31,35 +29,14 @@ namespace vsg
     public:
         Viewer();
 
-        using Views = std::vector<ref_ptr<View>>;
-
-        struct PerDeviceObjects
-        {
-            Windows windows;
-            ref_ptr<Queue> graphicsQueue;
-            ref_ptr<Queue> presentQueue;
-            ref_ptr<Semaphore> renderFinishedSemaphore;
-
-            // cache data to be used each frame
-            std::vector<uint32_t> imageIndices;
-            std::vector<VkSemaphore> signalSemaphores;
-            std::vector<VkCommandBuffer> commandBuffers;
-            std::vector<VkSwapchainKHR> swapchains;
-        };
-
-        using DeviceMap = std::map<ref_ptr<Device>, PerDeviceObjects>;
+        Viewer(const Viewer&) = delete;
+        Viewer& operator=(const Viewer& rhs) = delete;
 
         /// add Window to Viewer
         virtual void addWindow(ref_ptr<Window> window);
 
         Windows& windows() { return _windows; }
         const Windows& windows() const { return _windows; }
-
-        /// add View to Viewer
-        void addView(ref_ptr<View> view);
-
-        Views& getViews() { return _views; }
-        const Views& getViews() const { return _views; }
 
         clock::time_point& start_point() { return _start_point; }
         const clock::time_point& start_point() const { return _start_point; }
@@ -71,16 +48,16 @@ namespace vsg
         bool active() const;
 
         /// schedule closure of the viewer and associated windows, after a call to Viewer::close() the Viewer::active() method will return false
-        void close() { _close = true; }
+        void close();
 
         /// poll the events for all attached windows, return true if new events are available
         bool pollEvents(bool discardPreviousEvents = true);
 
         /// get the current set of Events that are filled in by prior calls to pollEvents
-        Events& getEvents() { return _events; }
+        UIEvents& getEvents() { return _events; }
 
         /// get the const current set of Events that are filled in by prior calls to pollEvents
-        const Events& getEvents() const { return _events; }
+        const UIEvents& getEvents() const { return _events; }
 
         /// add event handler
         void addEventHandler(ref_ptr<Visitor> eventHandler) { _eventHandlers.emplace_back(eventHandler); }
@@ -104,8 +81,6 @@ namespace vsg
         /// pass the Events into the any register EventHandlers
         virtual void handleEvents();
 
-        virtual void reassignFrameCache();
-
         virtual void compile(BufferPreferences bufferPreferences = {});
 
         virtual bool acquireNextFrame();
@@ -118,7 +93,12 @@ namespace vsg
         using Presentations = std::vector<ref_ptr<Presentation>>;
         Presentations presentations;
 
-        void assignRecordAndSubmitTaskAndPresentation(CommandGraphs commandGraphs, DatabasePager* databasePager = nullptr);
+        void assignRecordAndSubmitTaskAndPresentation(CommandGraphs commandGraphs);
+
+        std::list<std::thread> threads;
+
+        void setupThreading();
+        void stopThreading();
 
         virtual void update();
 
@@ -126,23 +106,27 @@ namespace vsg
 
         virtual void present();
 
-        ref_ptr<CompileTraversal> _compileTraversal;
+        /// Call vkDeviceWaitIdle on all the devices associated with this Viewer
+        void deviceWaitIdle() const;
 
     protected:
         virtual ~Viewer();
 
         bool _close = false;
+        ref_ptr<ActivityStatus> _status;
 
         ref_ptr<FrameStamp> _frameStamp;
 
         Windows _windows;
-        Views _views;
-
-        DeviceMap _deviceMap;
 
         clock::time_point _start_point;
-        Events _events;
+        UIEvents _events;
         EventHandlers _eventHandlers;
+
+        bool _threading = false;
+        ref_ptr<FrameBlock> _frameBlock;
+        ref_ptr<Barrier> _submissionCompleted;
     };
+    VSG_type_name(vsg::Viewer);
 
 } // namespace vsg

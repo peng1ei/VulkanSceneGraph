@@ -19,7 +19,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 namespace vsg
 {
-    VSG_type_name(vsg::Objects);
 
     class VSG_DECLSPEC Objects : public Inherit<Object, Objects>
     {
@@ -36,7 +35,6 @@ namespace vsg
         void traverse(Visitor& visitor) override { t_traverse(*this, visitor); }
         void traverse(ConstVisitor& visitor) const override { t_traverse(*this, visitor); }
         void traverse(RecordTraversal& visitor) const override { t_traverse(*this, visitor); }
-        void traverse(CullTraversal& visitor) const override { t_traverse(*this, visitor); }
 
         void read(Input& input) override;
         void write(Output& output) const override;
@@ -67,5 +65,6 @@ namespace vsg
 
         Children _children;
     };
+    VSG_type_name(vsg::Objects);
 
 } // namespace vsg

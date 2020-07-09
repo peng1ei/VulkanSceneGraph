@@ -14,14 +14,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/nodes/Node.h>
 
-#include <vsg/traversals/CompileTraversal.h>
-#include <vsg/vk/CommandPool.h>
-#include <vsg/vk/DescriptorPool.h>
-#include <vsg/vk/DescriptorSet.h>
-#include <vsg/vk/GraphicsPipeline.h>
-#include <vsg/vk/PushConstants.h>
+#include <vsg/commands/Draw.h>
 
-#define GEOMETRY_AS_COMMAND
+#include <vsg/traversals/CompileTraversal.h>
 
 namespace vsg
 {
@@ -35,12 +30,12 @@ namespace vsg
         void write(Output& output) const override;
 
         void compile(Context& context) override;
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
         using DrawCommands = std::vector<ref_ptr<Command>>;
 
         // settings
-        uint32_t firstBinding = 0; // TODO need to decide whether this needs to be serialized/per device
+        uint32_t firstBinding = 0;
         DataList arrays;
         ref_ptr<Data> indices;
         DrawCommands commands;

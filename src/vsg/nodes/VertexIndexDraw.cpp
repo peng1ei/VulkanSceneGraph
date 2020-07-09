@@ -10,19 +10,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include <vsg/vk/BindIndexBuffer.h>
-#include <vsg/vk/BindVertexBuffers.h>
-#include <vsg/vk/BufferData.h>
-#include <vsg/vk/Descriptor.h>
-#include <vsg/vk/DescriptorPool.h>
-#include <vsg/vk/DescriptorSet.h>
-#include <vsg/vk/Draw.h>
-
+#include <vsg/commands/BindIndexBuffer.h>
 #include <vsg/io/ReaderWriter.h>
-
-#include <vsg/traversals/RecordTraversal.h>
-
 #include <vsg/nodes/VertexIndexDraw.h>
+#include <vsg/traversals/RecordTraversal.h>
 
 using namespace vsg;
 
@@ -60,13 +51,14 @@ void VertexIndexDraw::read(Input& input)
 
     Command::read(input);
 
+    input.read("firstBinding", firstBinding);
     arrays.resize(input.readValue<uint32_t>("NumArrays"));
     for (auto& array : arrays)
     {
-        array = input.readObject<Data>("Array");
+        input.readObject("Array", array);
     }
 
-    indices = input.readObject<Data>("Indices");
+    input.readObject("Indices", indices);
 
     // vkCmdDrawIndexed settings
     input.read("indexCount", indexCount);
@@ -80,6 +72,7 @@ void VertexIndexDraw::write(Output& output) const
 {
     Command::write(output);
 
+    output.write("firstBinding", firstBinding);
     output.writeValue<uint32_t>("NumArrays", arrays.size());
     for (auto& array : arrays)
     {
@@ -146,7 +139,7 @@ void VertexIndexDraw::compile(Context& context)
     }
 }
 
-void VertexIndexDraw::dispatch(CommandBuffer& commandBuffer) const
+void VertexIndexDraw::record(CommandBuffer& commandBuffer) const
 {
     auto& vkd = _vulkanData[commandBuffer.deviceID];
 

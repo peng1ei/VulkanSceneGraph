@@ -12,6 +12,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/core/Inherit.h>
+
 #include <algorithm>
 
 namespace vsg
@@ -25,7 +27,7 @@ namespace vsg
 
         ref_ptr<ScratchMemory> next;
 
-        ScratchMemory(size_t bufferSize)
+        explicit ScratchMemory(size_t bufferSize)
         {
             size = bufferSize;
             buffer = new uint8_t[bufferSize];

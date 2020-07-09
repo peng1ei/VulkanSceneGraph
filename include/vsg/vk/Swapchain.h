@@ -14,6 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/vk/ImageView.h>
 #include <vsg/vk/Surface.h>
+#include <vsg/vk/Fence.h>
 
 namespace vsg
 {
@@ -45,14 +46,12 @@ namespace vsg
     protected:
         virtual ~SwapchainImage();
     };
+    VSG_type_name(vsg::SwapchainImage);
 
     class VSG_DECLSPEC Swapchain : public Inherit<Object, Swapchain>
     {
     public:
-        Swapchain(VkSwapchainKHR swapchain, Device* device, Surface* surface, AllocationCallbacks* allocator = nullptr);
-
-        using Result = vsg::Result<Swapchain, VkResult, VK_SUCCESS>;
-        static Result create(PhysicalDevice* physicalDevice, Device* device, Surface* surface, uint32_t width, uint32_t height, SwapchainPreferences& preferences, AllocationCallbacks* allocator = nullptr);
+        Swapchain(PhysicalDevice* physicalDevice, Device* device, Surface* surface, uint32_t width, uint32_t height, SwapchainPreferences& preferences, AllocationCallbacks* allocator = nullptr);
 
         operator VkSwapchainKHR() const { return _swapchain; }
 
@@ -60,9 +59,11 @@ namespace vsg
 
         const VkExtent2D& getExtent() const { return _extent; }
 
-        using ImageViews = std::vector<ref_ptr<ImageView>>;
         ImageViews& getImageViews() { return _imageViews; }
         const ImageViews& getImageViews() const { return _imageViews; }
+
+        /// call vkAcquireNextImageKHR
+        VkResult acquireNextImage(uint64_t timeout, ref_ptr<Semaphore> semaphore, ref_ptr<Fence> fence, uint32_t& imageIndex);
 
     protected:
         virtual ~Swapchain();
@@ -76,4 +77,6 @@ namespace vsg
 
         vsg::ref_ptr<AllocationCallbacks> _allocator;
     };
+    VSG_type_name(vsg::Swapchain);
+
 } // namespace vsg

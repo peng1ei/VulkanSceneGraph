@@ -10,16 +10,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include <vsg/vk/CopyImage.h>
-#include <vsg/vk/PipelineBarrier.h>
+#include <vsg/commands/CopyImage.h>
+#include <vsg/commands/PipelineBarrier.h>
 
 #include <vsg/viewer/CopyImageViewToWindow.h>
 
 using namespace vsg;
 
-void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
+void CopyImageViewToWindow::record(CommandBuffer& commandBuffer) const
 {
-    auto imageView = window->imageView(window->nextImageIndex());
+    // TODO: replace this implementation with a list of commands rather than present create commands, record commands, delete commands
+
+    // do nothing if the nextImageIndex() is invalid.
+    size_t imageIndex = window->imageIndex();
+    if (imageIndex >= window->numFrames()) return;
+
+    auto imageView = window->imageView(imageIndex);
 
     //  transition image layouts for copy
     auto imb_transitionSwapChainToWriteDest = ImageMemoryBarrier::create(
@@ -28,12 +34,6 @@ void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
         VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
         ref_ptr<Image>(imageView->getImage()),
         VkImageSubresourceRange{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
-
-    auto pb_transitionSwapChainToWriteDest = PipelineBarrier::create(
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0, imb_transitionSwapChainToWriteDest);
-
-    pb_transitionSwapChainToWriteDest->dispatch(commandBuffer);
 
     auto ibm_transitionStorageImageToReadSrc = vsg::ImageMemoryBarrier::create(
         0, VK_ACCESS_TRANSFER_READ_BIT,
@@ -44,9 +44,11 @@ void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
 
     auto pb_transitionStorageImageToReadSrc = PipelineBarrier::create(
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0, ibm_transitionStorageImageToReadSrc);
+        0,
+        imb_transitionSwapChainToWriteDest,
+        ibm_transitionStorageImageToReadSrc);
 
-    pb_transitionStorageImageToReadSrc->dispatch(commandBuffer);
+    pb_transitionStorageImageToReadSrc->record(commandBuffer);
 
     // copy image
     VkImageCopy copyRegion{};
@@ -63,7 +65,7 @@ void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
     copyImage->dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     copyImage->regions.emplace_back(copyRegion);
 
-    copyImage->dispatch(commandBuffer);
+    copyImage->record(commandBuffer);
 
     // transition image layouts back
     auto imb_transitionSwapChainToOriginal = ImageMemoryBarrier::create(
@@ -72,12 +74,6 @@ void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
         VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
         ref_ptr<Image>(imageView->getImage()),
         VkImageSubresourceRange{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1});
-
-    auto pb_transitionSwapChainToOriginal = PipelineBarrier::create(
-        VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0, imb_transitionSwapChainToOriginal);
-
-    pb_transitionSwapChainToOriginal->dispatch(commandBuffer);
 
     auto imb_transitionStorageImageToOriginal = ImageMemoryBarrier::create(
         VK_ACCESS_TRANSFER_READ_BIT, 0,
@@ -88,7 +84,9 @@ void CopyImageViewToWindow::dispatch(CommandBuffer& commandBuffer) const
 
     auto pb_transitionStorageImageToOriginal = PipelineBarrier::create(
         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-        0, imb_transitionStorageImageToOriginal);
+        0,
+        imb_transitionSwapChainToOriginal,
+        imb_transitionStorageImageToOriginal);
 
-    pb_transitionStorageImageToOriginal->dispatch(commandBuffer);
+    pb_transitionStorageImageToOriginal->record(commandBuffer);
 }

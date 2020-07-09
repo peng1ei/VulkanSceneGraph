@@ -22,7 +22,10 @@ namespace vsg
     class VSG_DECLSPEC OperationThreads : public Inherit<Object, OperationThreads>
     {
     public:
-        OperationThreads(uint32_t numThreads, ref_ptr<Active> in_active = {});
+        OperationThreads(uint32_t numThreads, ref_ptr<ActivityStatus> in_status = {});
+
+        OperationThreads(const OperationThreads&) = delete;
+        OperationThreads& operator=(const OperationThreads& rhs) = delete;
 
         void add(ref_ptr<Operation> operation)
         {
@@ -45,7 +48,7 @@ namespace vsg
         using Threads = std::list<std::thread>;
         Threads threads;
         ref_ptr<OperationQueue> queue;
-        ref_ptr<Active> active;
+        ref_ptr<ActivityStatus> status;
 
     protected:
         virtual ~OperationThreads()

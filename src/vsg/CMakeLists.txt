@@ -17,7 +17,6 @@ set(SOURCES
     core/External.cpp
     core/Object.cpp
     core/Objects.cpp
-    core/Result.cpp
     core/Visitor.cpp
     core/Version.cpp
 
@@ -25,12 +24,10 @@ set(SOURCES
 
     maths/transform.cpp
 
-    nodes/Commands.cpp
     nodes/Group.cpp
     nodes/Geometry.cpp
     nodes/Node.cpp
     nodes/QuadGroup.cpp
-    nodes/StateGroup.cpp
     nodes/CullGroup.cpp
     nodes/CullNode.cpp
     nodes/LOD.cpp
@@ -38,6 +35,36 @@ set(SOURCES
     nodes/MatrixTransform.cpp
     nodes/VertexIndexDraw.cpp
 
+    commands/BindIndexBuffer.cpp
+    commands/BindVertexBuffers.cpp
+    commands/Commands.cpp
+    commands/BlitImage.cpp
+    commands/CopyImage.cpp
+    commands/CopyImageToBuffer.cpp
+    commands/PipelineBarrier.cpp
+    commands/Event.cpp
+    commands/NextSubPass.cpp
+    commands/Dispatch.cpp
+    commands/PushConstants.cpp
+    commands/Draw.cpp
+    commands/DrawIndexed.cpp
+
+    state/ComputePipeline.cpp
+    state/DescriptorSet.cpp
+    state/GraphicsPipeline.cpp
+    state/Descriptor.cpp
+    state/DescriptorBuffer.cpp
+    state/DescriptorImage.cpp
+    state/DescriptorImageView.cpp
+    state/DescriptorTexelBufferView.cpp
+    state/DescriptorSetLayout.cpp
+    state/ShaderModule.cpp
+    state/ShaderStage.cpp
+    state/PipelineLayout.cpp
+    state/Sampler.cpp
+    state/ResourceHints.cpp
+    state/StateCommand.cpp
+    state/StateGroup.cpp
 
     io/FileSystem.cpp
     io/AsciiInput.cpp
@@ -56,19 +83,23 @@ set(SOURCES
     io/write.cpp
 
     traversals/RecordTraversal.cpp
-    traversals/CullTraversal.cpp
     traversals/CompileTraversal.cpp
     traversals/ComputeBounds.cpp
+    traversals/Intersector.cpp
+    traversals/LineSegmentIntersector.cpp
+    traversals/LoadPagedLOD.cpp
 
+    threading/Affinity.cpp
     threading/OperationQueue.cpp
     threading/OperationThreads.cpp
 
     viewer/Camera.cpp
-    viewer/View.cpp
+    viewer/EllipsoidModel.cpp
     viewer/Viewer.cpp
     viewer/Window.cpp
     viewer/Trackball.cpp
     viewer/CopyImageViewToWindow.cpp
+    viewer/ExecuteCommands.cpp
     viewer/CommandGraph.cpp
     viewer/RenderGraph.cpp
     viewer/Presentation.cpp
@@ -84,48 +115,27 @@ set(SOURCES
     raytracing/TopLevelAccelerationStructure.cpp
     raytracing/TraceRays.cpp
 
+
     vk/Buffer.cpp
     vk/BufferData.cpp
     vk/BufferView.cpp
-    vk/BindIndexBuffer.cpp
-    vk/BindVertexBuffers.cpp
-    vk/Command.cpp
     vk/CommandBuffer.cpp
     vk/CommandPool.cpp
-    vk/ComputePipeline.cpp
     vk/Context.cpp
-    vk/CopyImage.cpp
-    vk/Descriptor.cpp
-    vk/DescriptorBuffer.cpp
-    vk/DescriptorImage.cpp
-    vk/DescriptorImageView.cpp
-    vk/DescriptorTexelBufferView.cpp
     vk/DescriptorPool.cpp
-    vk/DescriptorSet.cpp
-    vk/DescriptorSetLayout.cpp
     vk/Device.cpp
     vk/DeviceMemory.cpp
-    vk/Draw.cpp
     vk/Extensions.cpp
     vk/Fence.cpp
     vk/Framebuffer.cpp
-    vk/GraphicsPipeline.cpp
     vk/Image.cpp
     vk/ImageData.cpp
     vk/ImageView.cpp
     vk/Instance.cpp
-    vk/NextSubPass.cpp
     vk/PhysicalDevice.cpp
-    vk/PipelineLayout.cpp
-    vk/PipelineBarrier.cpp
-    vk/PushConstants.cpp
     vk/Queue.cpp
     vk/RenderPass.cpp
-    vk/ResourceHints.cpp
-    vk/Sampler.cpp
     vk/Semaphore.cpp
-    vk/ShaderModule.cpp
-    vk/ShaderStage.cpp
     vk/Surface.cpp
     vk/Swapchain.cpp
 )
@@ -219,7 +229,7 @@ set_property(TARGET vsg PROPERTY SOVERSION ${VSG_SOVERSION})
 set_property(TARGET vsg PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET vsg PROPERTY CXX_STANDARD 17)
 
-target_include_directories(vsg PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include> $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>)
+target_include_directories(vsg PUBLIC $<BUILD_INTERFACE:${VSG_SOURCE_DIR}/include> $<BUILD_INTERFACE:${VSG_BINARY_DIR}/include>)
 
 
 target_link_libraries(vsg ${LIBRARIES})

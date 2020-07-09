@@ -12,10 +12,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/maths/transform.h>
 
-#include <iostream>
-
 using namespace vsg;
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// inverse
+//
 template<class T>
 typename T::value_type difference(const T& lhs, const T& rhs)
 {
@@ -37,7 +39,7 @@ T t_inverse_4x3(const T& m)
 
     value_type det = m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
 
-    if (det == 0.0) return T(std::numeric_limits<value_type>::quiet_NaN()); // could use signaling_NaN()
+    if (det == value_type(0.0)) return T(std::numeric_limits<value_type>::quiet_NaN()); // could use signaling_NaN()
 
     value_type A1223 = m[2][1] * m[3][2] - m[2][2] * m[3][1];
     value_type A0223 = m[2][0] * m[3][2] - m[2][2] * m[3][0];
@@ -46,7 +48,7 @@ T t_inverse_4x3(const T& m)
     value_type A0213 = m[1][0] * m[3][2] - m[1][2] * m[3][0];
     value_type A0113 = m[1][0] * m[3][1] - m[1][1] * m[3][0];
 
-    value_type inv_det = 1.0 / det;
+    value_type inv_det = value_type(1.0) / det;
 
     value_type m00 = inv_det * (m[1][1] * m[2][2] - m[1][2] * m[2][1]);
     value_type m01 = inv_det * (m[0][2] * m[2][1] - m[0][1] * m[2][2]);
@@ -61,10 +63,10 @@ T t_inverse_4x3(const T& m)
     value_type m31 = inv_det * (m[0][0] * A1223 - m[0][1] * A0223 + m[0][2] * A0123);
     value_type m32 = inv_det * (m[0][1] * A0213 - m[0][2] * A0113 - m[0][0] * A1213);
 
-    return T(m00, m01, m02, 0.0,  // column 0
-             m10, m11, m12, 0.0,  // column 1
-             m20, m21, m22, 0.0,  // column 2
-             m30, m31, m32, 1.0); // column 3
+    return T(m00, m01, m02, value_type(0.0),  // column 0
+             m10, m11, m12, value_type(0.0),  // column 1
+             m20, m21, m22, value_type(0.0),  // column 2
+             m30, m31, m32, value_type(1.0)); // column 3
 }
 
 template<class T>
@@ -93,9 +95,9 @@ T t_inverse_4x4(const T& m)
 
     value_type det = m[0][0] * (m[1][1] * A2323 - m[1][2] * A1323 + m[1][3] * A1223) - m[0][1] * (m[1][0] * A2323 - m[1][2] * A0323 + m[1][3] * A0223) + m[0][2] * (m[1][0] * A1323 - m[1][1] * A0323 + m[1][3] * A0123) - m[0][3] * (m[1][0] * A1223 - m[1][1] * A0223 + m[1][2] * A0123);
 
-    if (det == 0.0) return T(std::numeric_limits<value_type>::quiet_NaN()); // could use signaling_NaN()
+    if (det == value_type(0.0)) return T(std::numeric_limits<value_type>::quiet_NaN()); // could use signaling_NaN()
 
-    double inv_det = 1.0 / det;
+    value_type inv_det = value_type(1.0) / det;
 
     return T(
         inv_det * (m[1][1] * A2323 - m[1][2] * A1323 + m[1][3] * A1223),  // 00
@@ -158,4 +160,72 @@ dmat4 vsg::inverse(const dmat4& m)
     {
         return t_inverse_4x4(m);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// computeFrustumBound
+//
+template<typename T>
+t_sphere<T> t_computeFrustumBound(const t_mat4<T>& m)
+{
+    using vec_type = t_vec3<T>;
+    using value_type = T;
+    auto inv_m = inverse(m);
+
+    auto update_radius2 = [&](value_type& r, const vec_type& center, const vec_type& corner) -> void
+    {
+        auto new_r = length2(corner - center);
+        if (new_r > r) r = new_r;
+    };
+
+    // compute the a2 the radius squared of the near plane relative to the near planes mid point
+    vec_type near_center = inv_m * vec_type(0.0, 0.0, -1.0);
+    value_type a2 = length2(inv_m * vec_type(-1.0, -1.0, -1.0) - near_center);
+    update_radius2(a2, near_center, inv_m * vec_type(1.0, -1.0, -1.0));
+    update_radius2(a2, near_center, inv_m * vec_type(1.0, 1.0, -1.0));
+    update_radius2(a2, near_center, inv_m * vec_type(-1.0, 1.0, -1.0));
+
+    // compute the b2 the radius squared of the far plane relative to the far planes mid point
+    vec_type far_center = inv_m * vec_type(0.0, 0.0, 1.0);
+    value_type b2 = length2(inv_m * vec_type(-1.0, -1.0, 1.0) - far_center);
+    update_radius2(b2, far_center, inv_m * vec_type(1.0, -1.0, 1.0));
+    update_radius2(b2, far_center, inv_m * vec_type(1.0, 1.0, 1.0));
+    update_radius2(b2, far_center, inv_m * vec_type(-1.0, 1.0, 1.0));
+
+    // compute the position along the center line of the frustum that minimizes the radius to the near/far corners of the frustum
+    value_type c2 = length2(far_center - near_center);
+    value_type c = sqrt(c2);
+    value_type d = (b2 + c2 - a2) / (static_cast<value_type>(2.0) * c);
+
+    // compute radius
+    value_type radius;
+    if (d>c) // d beyond far plane
+    {
+        d = c;
+        radius = sqrt(b2);
+    }
+    else if (d<0.0) // d in front of near plane
+    {
+        d = 0.0;
+        radius = sqrt(a2);
+    }
+    else // d between near and far planes
+    {
+        radius = sqrt(a2 + d*d);
+    }
+
+    auto center = near_center + (far_center - near_center) * (d/c);
+
+    return t_sphere<T>(center,radius);
+}
+
+sphere vsg::computeFrustumBound(const mat4& m)
+{
+    return t_computeFrustumBound<float>(m);
+}
+
+dsphere vsg::computeFrustumBound(const dmat4& m)
+{
+    return t_computeFrustumBound<double>(m);
 }

@@ -40,23 +40,32 @@ namespace vsg
         Array() :
             _size(0),
             _data(nullptr) {}
-        Array(std::uint32_t numElements, value_type* data) :
+
+        explicit Array(std::uint32_t numElements, Layout layout = {}) :
+            Data(layout),
             _size(numElements),
-            _data(data) {}
-        Array(std::uint32_t numElements, value_type* data, Layout layout) :
+            _data(new value_type[numElements]) {}
+
+        Array(std::uint32_t numElements, value_type* data, Layout layout = {}) :
             Data(layout),
             _size(numElements),
             _data(data) {}
+
+        Array(std::uint32_t numElements, const value_type& value, Layout layout = {}) :
+            Data(layout),
+            _size(numElements),
+            _data(new value_type[numElements])
+        {
+            for (auto& v : *this) v = value;
+        }
+
         explicit Array(std::initializer_list<value_type> l) :
             _size(static_cast<std::uint32_t>(l.size())),
             _data(new value_type[l.size()])
         {
             value_type* ptr = _data;
-            for (value_type const& v : l) { (*ptr++) = v; }
+            for (const value_type& v : l) { (*ptr++) = v; }
         }
-        explicit Array(std::uint32_t numElements) :
-            _size(numElements),
-            _data(new value_type[numElements]) {}
 
         template<typename... Args>
         static ref_ptr<Array> create(Args... args)
@@ -110,6 +119,7 @@ namespace vsg
         {
             Data::write(output);
             output.writeValue<std::uint32_t>("Size", _size);
+
             output.writePropertyName("Data");
             output.write(size(), _data);
             output.writeEndOfLine();
@@ -155,6 +165,8 @@ namespace vsg
 
         void* dataPointer(std::size_t i) override { return _data + i; }
         const void* dataPointer(std::size_t i) const override { return _data + i; }
+
+        std::uint32_t dimensions() const override { return 1; }
 
         std::uint32_t width() const override { return _size; }
         std::uint32_t height() const override { return 1; }
@@ -202,13 +214,25 @@ namespace vsg
     VSG_array(dvec3Array, dvec3);
     VSG_array(dvec4Array, dvec4);
 
+    VSG_array(bvec2Array, bvec2);
+    VSG_array(bvec3Array, bvec3);
+    VSG_array(bvec4Array, bvec4);
+
     VSG_array(ubvec2Array, ubvec2);
     VSG_array(ubvec3Array, ubvec3);
     VSG_array(ubvec4Array, ubvec4);
 
+    VSG_array(svec2Array, svec2);
+    VSG_array(svec3Array, svec3);
+    VSG_array(svec4Array, svec4);
+
     VSG_array(usvec2Array, usvec2);
     VSG_array(usvec3Array, usvec3);
     VSG_array(usvec4Array, usvec4);
+
+    VSG_array(ivec2Array, ivec2);
+    VSG_array(ivec3Array, ivec3);
+    VSG_array(ivec4Array, ivec4);
 
     VSG_array(uivec2Array, uivec2);
     VSG_array(uivec3Array, uivec3);

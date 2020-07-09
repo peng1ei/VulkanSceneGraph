@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/viewer/EllipsoidModel.h>
 #include <vsg/viewer/ViewMatrix.h>
 
 namespace vsg
@@ -34,7 +35,11 @@ namespace vsg
             get(matrix);
             matrix = inverse(matrix);
         }
+        virtual void changeExtent(const VkExtent2D& /*prevExtent*/, const VkExtent2D& /*newExtent*/)
+        {
+        }
     };
+    VSG_type_name(vsg::ProjectionMatrix);
 
     class Perspective : public Inherit<ProjectionMatrix, Perspective>
     {
@@ -57,12 +62,16 @@ namespace vsg
 
         void get(mat4& matrix) const override { matrix = perspective(radians(fieldOfViewY), aspectRatio, nearDistance, farDistance); }
         void get(dmat4& matrix) const override { matrix = perspective(radians(fieldOfViewY), aspectRatio, nearDistance, farDistance); }
-
+        void changeExtent(const VkExtent2D&, const VkExtent2D& newExtent) override
+        {
+            aspectRatio = static_cast<double>(newExtent.width) / static_cast<double>(newExtent.height);
+        }
         double fieldOfViewY;
         double aspectRatio;
         double nearDistance;
         double farDistance;
     };
+    VSG_type_name(vsg::Perspective);
 
     class Orthographic : public Inherit<ProjectionMatrix, Orthographic>
     {
@@ -89,6 +98,13 @@ namespace vsg
 
         void get(mat4& matrix) const override { matrix = orthographic(left, right, bottom, top, nearDistance, farDistance); }
         void get(dmat4& matrix) const override { matrix = orthographic(left, right, bottom, top, nearDistance, farDistance); }
+        void changeExtent(const VkExtent2D& prevExtent, const VkExtent2D& newExtent) override
+        {
+            double oldRatio = static_cast<double>(prevExtent.width) / static_cast<double>(prevExtent.height);
+            double newRatio = static_cast<double>(newExtent.width) / static_cast<double>(newExtent.height);
+            left *= newRatio / oldRatio;
+            right *= newRatio / oldRatio;
+        }
 
         double left;
         double right;
@@ -97,6 +113,7 @@ namespace vsg
         double nearDistance;
         double farDistance;
     };
+    VSG_type_name(vsg::Orthographic);
 
     class RelativeProjection : public Inherit<ProjectionMatrix, RelativeProjection>
     {
@@ -119,105 +136,16 @@ namespace vsg
             in_matrix = matrix * in_matrix;
         }
 
+        void changeExtent(const VkExtent2D& prevExtent, const VkExtent2D& newExtent) override
+        {
+            double oldRatio = static_cast<double>(prevExtent.width) / static_cast<double>(prevExtent.height);
+            double newRatio = static_cast<double>(newExtent.width) / static_cast<double>(newExtent.height);
+            matrix = scale(oldRatio / newRatio, 1.0, 1.0) * matrix;
+        }
         ref_ptr<ProjectionMatrix> projectionMatrix;
         dmat4 matrix;
     };
-
-    const double WGS_84_RADIUS_EQUATOR = 6378137.0;
-    const double WGS_84_RADIUS_POLAR = 6356752.3142;
-
-    class EllipsoidModel : public Inherit<Object, EllipsoidModel>
-    {
-    public:
-        EllipsoidModel(double rEquator = WGS_84_RADIUS_EQUATOR, double rPolar = WGS_84_RADIUS_POLAR) :
-            _radiusEquator(rEquator),
-            _radiusPolar(rPolar)
-        {
-            double flattening = (_radiusEquator - _radiusPolar) / _radiusEquator;
-            _eccentricitySquared = 2 * flattening - flattening * flattening;
-        }
-
-        double radiusEquator() const { return _radiusEquator; }
-        double radiusPolar() const { return _radiusPolar; }
-
-        // latitude and longitude in radians
-        dvec3 convertLatLongAltitudeToECEF(const dvec3& lla)
-        {
-            const double latitude = lla[0];
-            const double longitude = lla[1];
-            const double height = lla[2];
-
-            // for details on maths see http://www.colorado.edu/geography/gcraft/notes/datum/gif/llhxyz.gif
-            double sin_latitude = sin(latitude);
-            double cos_latitude = cos(latitude);
-            double N = _radiusEquator / sqrt(1.0 - _eccentricitySquared * sin_latitude * sin_latitude);
-            return dvec3((N + height) * cos_latitude * cos(longitude),
-                         (N + height) * cos_latitude * sin(longitude),
-                         (N * (1 - _eccentricitySquared) + height) * sin_latitude);
-        }
-
-        // latitude and longitude in radians
-        dvec3 convertECEVToLatLongAltitude(const dvec3& ecef)
-        {
-            double latitude, longitude, height;
-            const double PI_2 = PI * 0.5;
-
-            // handle polar and center-of-earth cases directly.
-            if (ecef.x != 0.0)
-                longitude = atan2(ecef.y, ecef.x);
-            else
-            {
-                if (ecef.y > 0.0)
-                    longitude = PI_2;
-                else if (ecef.y < 0.0)
-                    longitude = -PI_2;
-                else
-                {
-                    // at pole or at center of the earth
-                    longitude = 0.0;
-                    if (ecef.z > 0.0)
-                    { // north pole.
-                        latitude = PI_2;
-                        height = ecef.z - _radiusPolar;
-                    }
-                    else if (ecef.z < 0.0)
-                    { // south pole.
-                        latitude = -PI_2;
-                        height = -ecef.z - _radiusPolar;
-                    }
-                    else
-                    { // center of earth.
-                        latitude = PI_2;
-                        height = -_radiusPolar;
-                    }
-                    return dvec3(latitude, longitude, height);
-                }
-            }
-
-            // http://www.colorado.edu/geography/gcraft/notes/datum/gif/xyzllh.gif
-            double p = sqrt(ecef.x * ecef.x + ecef.y * ecef.y);
-            double theta = atan2(ecef.z * _radiusEquator, (p * _radiusPolar));
-            double eDashSquared = (_radiusEquator * _radiusEquator - _radiusPolar * _radiusPolar) /
-                                  (_radiusPolar * _radiusPolar);
-
-            double sin_theta = sin(theta);
-            double cos_theta = cos(theta);
-
-            latitude = atan((ecef.z + eDashSquared * _radiusPolar * sin_theta * sin_theta * sin_theta) /
-                            (p - _eccentricitySquared * _radiusEquator * cos_theta * cos_theta * cos_theta));
-
-            double sin_latitude = sin(latitude);
-            double N = _radiusEquator / sqrt(1.0 - _eccentricitySquared * sin_latitude * sin_latitude);
-
-            height = p / cos(latitude) - N;
-            return dvec3(latitude, longitude, height);
-        }
-
-    protected:
-        double _radiusEquator;
-        double _radiusPolar;
-        double _eccentricitySquared;
-    };
+    VSG_type_name(vsg::RelativeProjection);
 
     class EllipsoidPerspective : public Inherit<ProjectionMatrix, EllipsoidPerspective>
     {
@@ -250,15 +178,20 @@ namespace vsg
         }
         void get(dmat4& matrix) const override
         {
-            // std::cout<<"camera eye : "<<lookAt->eye<<", "<<ellipsoidModel->convertECEVToLatLongAltitude(lookAt->eye)<<std::endl;
+            // std::cout<<"camera eye : "<<lookAt->eye<<", "<<ellipsoidModel->convertECEVToLatLongHeight(lookAt->eye)<<std::endl;
             vsg::dvec3 v = lookAt->eye;
             vsg::dvec3 lv = vsg::normalize(lookAt->center - lookAt->eye);
             double R = ellipsoidModel->radiusEquator();
-            double H = ellipsoidModel->convertECEVToLatLongAltitude(v).z;
+            double H = ellipsoidModel->convertECEFToLatLongHeight(v).z;
             double D = R + H;
+
             double alpha = (D > R) ? std::acos(R / D) : 0.0;
-            double beta = std::acos(R / (R + horizonMountainHeight));
-            double theta = std::acos(-vsg::dot(lv, v) / (vsg::length(lv) * vsg::length(v)));
+
+            double beta_ratio = R / (R + horizonMountainHeight);
+            double beta = beta_ratio < 1.0 ? std::acos(beta_ratio) : 0.0;
+
+            double theta_ratio = -vsg::dot(lv, v) / (vsg::length(lv) * vsg::length(v));
+            double theta = theta_ratio < 1.0 ? std::acos(theta_ratio) : 0.0;
 
             double l = R * (std::tan(alpha) + std::tan(beta));
 
@@ -269,6 +202,11 @@ namespace vsg
             matrix = perspective(radians(fieldOfViewY), aspectRatio, nearDistance, farDistance);
         }
 
+        void changeExtent(const VkExtent2D&, const VkExtent2D& newExtent) override
+        {
+            aspectRatio = static_cast<double>(newExtent.width) / static_cast<double>(newExtent.height);
+        }
+
         ref_ptr<LookAt> lookAt;
         ref_ptr<EllipsoidModel> ellipsoidModel;
 
@@ -277,4 +215,6 @@ namespace vsg
         double nearFarRatio;
         double horizonMountainHeight;
     };
+    VSG_type_name(vsg::EllipsoidPerspective);
+
 } // namespace vsg

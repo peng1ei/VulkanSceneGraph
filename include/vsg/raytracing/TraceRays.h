@@ -12,8 +12,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/commands/Command.h>
 #include <vsg/raytracing/RayTracingShaderGroup.h>
-#include <vsg/vk/Command.h>
 
 namespace vsg
 {
@@ -23,7 +23,7 @@ namespace vsg
     public:
         TraceRays();
 
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
         ref_ptr<RayTracingShaderGroup> raygen;
         ref_ptr<RayTracingShaderGroup> missShader;

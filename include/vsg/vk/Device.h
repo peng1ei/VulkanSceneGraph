@@ -34,11 +34,7 @@ namespace vsg
     class VSG_DECLSPEC Device : public Inherit<Object, Device>
     {
     public:
-        Device(VkDevice device, PhysicalDevice* physicalDevice, AllocationCallbacks* allocator = nullptr);
-
-        using Result = vsg::Result<Device, VkResult, VK_SUCCESS>;
-        static Result create(PhysicalDevice* physicalDevice, QueueSettings& queueSettings, Names& layers, Names& deviceExtensions, AllocationCallbacks* allocator = nullptr);
-        static Result create(WindowTraits* traits);
+        Device(PhysicalDevice* physicalDevice, const QueueSettings& queueSettings, const Names& layers, const Names& deviceExtensions, AllocationCallbacks* allocator = nullptr);
 
         Instance* getInstance() { return _instance.get(); }
         const Instance* getInstance() const { return _instance.get(); }
@@ -48,6 +44,8 @@ namespace vsg
 
         operator VkDevice() const { return _device; }
         VkDevice getDevice() const { return _device; }
+
+        static uint32_t maxNumDevices();
 
         const uint32_t deviceID = 0;
 
@@ -67,5 +65,6 @@ namespace vsg
 
         std::list<ref_ptr<Queue>> _queues;
     };
+    VSG_type_name(vsg::Device);
 
 } // namespace vsg

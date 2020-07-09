@@ -12,14 +12,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/commands/PushConstants.h>
 #include <vsg/maths/plane.h>
-#include <vsg/vk/BindIndexBuffer.h>
-#include <vsg/vk/BindVertexBuffers.h>
+#include <vsg/state/ComputePipeline.h>
+#include <vsg/state/DescriptorSet.h>
+#include <vsg/state/GraphicsPipeline.h>
 #include <vsg/vk/CommandBuffer.h>
-#include <vsg/vk/ComputePipeline.h>
-#include <vsg/vk/DescriptorSet.h>
-#include <vsg/vk/GraphicsPipeline.h>
-#include <vsg/vk/PushConstants.h>
 
 #include <array>
 #include <map>
@@ -57,11 +55,11 @@ namespace vsg
         T& top() { return stack.top(); }
         const T& top() const { return stack.top(); }
 
-        inline void dispatch(CommandBuffer& commandBuffer)
+        inline void record(CommandBuffer& commandBuffer)
         {
             if (dirty)
             {
-                stack.top()->dispatch(commandBuffer);
+                stack.top()->record(commandBuffer);
                 dirty = false;
             }
         }
@@ -119,13 +117,13 @@ namespace vsg
             dirty = true;
         }
 
-        inline void pushAndPosMult(const Matrix& matrix)
+        inline void pushAndPostMult(const Matrix& matrix)
         {
             matrixStack.emplace(matrixStack.top() * matrix);
             dirty = true;
         }
 
-        inline void pushAndPosMult(const AlternativeMatrix& matrix)
+        inline void pushAndPostMult(const AlternativeMatrix& matrix)
         {
             matrixStack.emplace(matrixStack.top() * Matrix(matrix));
             dirty = true;
@@ -133,13 +131,13 @@ namespace vsg
 
         inline void pushAndPreMult(const Matrix& matrix)
         {
-            matrixStack.emplace(matrixStack.top() * matrix);
+            matrixStack.emplace(matrix * matrixStack.top());
             dirty = true;
         }
 
         inline void pushAndPreMult(const AlternativeMatrix& matrix)
         {
-            matrixStack.emplace(matrixStack.top() * Matrix(matrix));
+            matrixStack.emplace(Matrix(matrix) * matrixStack.top());
             dirty = true;
         }
 
@@ -151,7 +149,7 @@ namespace vsg
             dirty = true;
         }
 
-        inline void dispatch(CommandBuffer& commandBuffer)
+        inline void record(CommandBuffer& commandBuffer)
         {
             if (dirty)
             {
@@ -249,17 +247,17 @@ namespace vsg
             pushFrustum();
         }
 
-        inline void dispatch()
+        inline void record()
         {
             if (dirty)
             {
                 for (auto& stateStack : stateStacks)
                 {
-                    stateStack.dispatch(*_commandBuffer);
+                    stateStack.record(*_commandBuffer);
                 }
 
-                projectionMatrixStack.dispatch(*_commandBuffer);
-                modelviewMatrixStack.dispatch(*_commandBuffer);
+                projectionMatrixStack.record(*_commandBuffer);
+                modelviewMatrixStack.record(*_commandBuffer);
 
                 dirty = false;
             }
@@ -295,7 +293,7 @@ namespace vsg
         }
 
         template<typename T>
-        bool intersect(t_sphere<T> const& s)
+        bool intersect(const t_sphere<T>& s)
         {
             return vsg::intersect(_frustumStack.top(), s);
         }

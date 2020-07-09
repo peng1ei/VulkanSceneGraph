@@ -17,19 +17,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/core/Object.h>
 #include <vsg/core/ScratchMemory.h>
-
 #include <vsg/nodes/Group.h>
-
+#include <vsg/state/GraphicsPipeline.h>
 #include <vsg/vk/BufferData.h>
-#include <vsg/vk/Command.h>
 #include <vsg/vk/CommandPool.h>
 #include <vsg/vk/DescriptorPool.h>
 #include <vsg/vk/Fence.h>
-#include <vsg/vk/GraphicsPipeline.h>
+#include <vsg/vk/ImageData.h>
 #include <vsg/vk/Semaphore.h>
 
-#include <vsg/vk/BufferData.h>
-#include <vsg/vk/ImageData.h>
+#include <vsg/commands/Command.h>
 
 namespace vsg
 {
@@ -83,7 +80,7 @@ namespace vsg
         BufferData source;
         BufferData destination;
 
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
     protected:
         virtual ~CopyAndReleaseBufferDataCommand();
@@ -97,7 +94,7 @@ namespace vsg
             destination(dest),
             mipLevels(numMipMapLevels) {}
 
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
         BufferData source;
         ImageData destination;
@@ -113,14 +110,14 @@ namespace vsg
         BuildAccelerationStructureCommand(Device* device, VkAccelerationStructureInfoNV* info, const VkAccelerationStructureNV& structure, Buffer* instanceBuffer, Allocator* allocator = nullptr);
 
         void compile(Context&) override {}
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
         ref_ptr<Device> _device;
         VkAccelerationStructureInfoNV* _accelerationStructureInfo;
         VkAccelerationStructureNV _accelerationStructure;
         ref_ptr<Buffer> _instanceBuffer;
 
-        // scratch buffer set after compile traversal before dispatch of build commands
+        // scratch buffer set after compile traversal before record of build commands
         ref_ptr<Buffer> _scratchBuffer;
     };
 
@@ -139,7 +136,18 @@ namespace vsg
 
         // used by GraphicsPipeline.cpp
         ref_ptr<RenderPass> renderPass;
-        ref_ptr<ViewportState> viewport;
+
+        // pipeline states that are usually not set in a scene, e.g.,
+        // the viewport state, but might be set for some uses
+        GraphicsPipelineStates defaultPipelineStates;
+
+        // pipeline states that must be set to avoid Vulkan errors
+        // e.g., MultisampleState.
+        // XXX MultisampleState is complicated because the sample
+        // number needs to agree with the renderpass attachement, but
+        // other parts of the state, like alpha to coverage, belong to
+        // the scene graph .
+        GraphicsPipelineStates overridePipelineStates;
 
         // DescriptorSet.cpp
         ref_ptr<DescriptorPool> descriptorPool;
@@ -157,7 +165,7 @@ namespace vsg
         std::vector<ref_ptr<CopyAndReleaseImageDataCommand>> copyImageDataCommands;
         std::vector<ref_ptr<Command>> commands;
 
-        void dispatch();
+        void record();
         void waitForCompletion();
 
         ref_ptr<CommandBuffer> getOrCreateCommandBuffer();

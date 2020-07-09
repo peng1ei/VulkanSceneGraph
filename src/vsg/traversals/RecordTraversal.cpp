@@ -10,9 +10,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include <vsg/traversals/RecordTraversal.h>
-
-#include <vsg/nodes/Commands.h>
+#include <vsg/commands/Command.h>
+#include <vsg/commands/Commands.h>
+#include <vsg/io/DatabasePager.h>
+#include <vsg/io/Options.h>
+#include <vsg/maths/plane.h>
 #include <vsg/nodes/CullGroup.h>
 #include <vsg/nodes/CullNode.h>
 #include <vsg/nodes/Group.h>
@@ -20,21 +22,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/nodes/MatrixTransform.h>
 #include <vsg/nodes/PagedLOD.h>
 #include <vsg/nodes/QuadGroup.h>
-#include <vsg/nodes/StateGroup.h>
-
-#include <vsg/vk/Command.h>
+#include <vsg/state/StateGroup.h>
+#include <vsg/threading/atomics.h>
+#include <vsg/traversals/RecordTraversal.h>
+#include <vsg/ui/ApplicationEvent.h>
 #include <vsg/vk/CommandBuffer.h>
 #include <vsg/vk/RenderPass.h>
 #include <vsg/vk/State.h>
-
-#include <vsg/io/DatabasePager.h>
-#include <vsg/io/Options.h>
-
-#include <vsg/ui/ApplicationEvent.h>
-
-#include <vsg/maths/plane.h>
-
-#include <vsg/threading/atomics.h>
 
 using namespace vsg;
 
@@ -43,19 +37,50 @@ using namespace vsg;
 #define INLINE_TRAVERSE 1
 #define USE_FRUSTUM_ARRAY 1
 
-RecordTraversal::RecordTraversal(CommandBuffer* commandBuffer, uint32_t maxSlot, ref_ptr<FrameStamp> fs) :
-    frameStamp(fs),
-    state(new State(commandBuffer, maxSlot))
+RecordTraversal::RecordTraversal(CommandBuffer* commandBuffer, uint32_t maxSlot, FrameStamp* fs) :
+    _frameStamp(fs),
+    _state(new State(commandBuffer, maxSlot))
 {
+    if (_frameStamp) _frameStamp->ref();
+    if (_state) _state->ref();
 }
 
 RecordTraversal::~RecordTraversal()
 {
+    if (_culledPagedLODs) _culledPagedLODs->unref();
+    if (_databasePager) _databasePager->unref();
+    if (_state) _state->unref();
+    if (_frameStamp) _frameStamp->unref();
+}
+
+void RecordTraversal::setFrameStamp(FrameStamp* fs)
+{
+    if (fs == _frameStamp) return;
+
+    if (_frameStamp) _frameStamp->unref();
+
+    _frameStamp = fs;
+
+    if (_frameStamp) _frameStamp->ref();
+}
+
+void RecordTraversal::setDatabasePager(DatabasePager* dp)
+{
+    if (dp == _databasePager) return;
+
+    if (_databasePager) _databasePager->unref();
+    if (_culledPagedLODs) _culledPagedLODs->unref();
+
+    _databasePager = dp;
+    _culledPagedLODs = dp ? _databasePager->culledPagedLODs.get() : nullptr;
+
+    if (_databasePager) _databasePager->ref();
+    if (_culledPagedLODs) _culledPagedLODs->ref();
 }
 
 void RecordTraversal::setProjectionAndViewMatrix(const dmat4& projMatrix, const dmat4& viewMatrix)
 {
-    state->setProjectionAndViewMatrix(projMatrix, viewMatrix);
+    _state->setProjectionAndViewMatrix(projMatrix, viewMatrix);
 }
 
 void RecordTraversal::apply(const Object& object)
@@ -89,24 +114,24 @@ void RecordTraversal::apply(const LOD& lod)
     auto sphere = lod.getBound();
 
     // check if lod bounding sphere is in view frustum.
-    if (!state->intersect(sphere))
+    if (!_state->intersect(sphere))
     {
         return;
     }
 
-    const auto& proj = state->projectionMatrixStack.top();
-    const auto& mv = state->modelviewMatrixStack.top();
+    const auto& proj = _state->projectionMatrixStack.top();
+    const auto& mv = _state->modelviewMatrixStack.top();
     auto f = -proj[1][1];
 
     auto distance = std::abs(mv[0][2] * sphere.x + mv[1][2] * sphere.y + mv[2][2] * sphere.z + mv[3][2]);
     auto rf = sphere.r * f;
 
-    for (auto lodChild : lod.getChildren())
+    for (auto child : lod.getChildren())
     {
-        bool child_visible = rf > (lodChild.minimumScreenHeightRatio * distance);
+        bool child_visible = rf > (child.minimumScreenHeightRatio * distance);
         if (child_visible)
         {
-            lodChild.child->accept(*this);
+            child.node->accept(*this);
             return;
         }
     }
@@ -116,21 +141,21 @@ void RecordTraversal::apply(const PagedLOD& plod)
 {
     auto sphere = plod.getBound();
 
-    auto frameCount = frameStamp->frameCount;
+    auto frameCount = _frameStamp->frameCount;
 
     // check if lod bounding sphere is in view frustum.
-    if (!state->intersect(sphere))
+    if (!_state->intersect(sphere))
     {
-        if ((frameCount - plod.frameHighResLastUsed) > 1 && culledPagedLODs)
+        if ((frameCount - plod.frameHighResLastUsed) > 1 && _culledPagedLODs)
         {
-            culledPagedLODs->highresCulled.emplace_back(&plod);
+            _culledPagedLODs->highresCulled.emplace_back(&plod);
         }
 
         return;
     }
 
-    const auto& proj = state->projectionMatrixStack.top();
-    const auto& mv = state->modelviewMatrixStack.top();
+    const auto& proj = _state->projectionMatrixStack.top();
+    const auto& mv = _state->modelviewMatrixStack.top();
     auto f = -proj[1][1];
 
     auto distance = std::abs(mv[0][2] * sphere.x + mv[1][2] * sphere.y + mv[2][2] * sphere.z + mv[3][2]);
@@ -144,9 +169,9 @@ void RecordTraversal::apply(const PagedLOD& plod)
         if (child_visible)
         {
             auto previousHighResUsed = plod.frameHighResLastUsed.exchange(frameCount);
-            if (culledPagedLODs && ((frameCount - previousHighResUsed) > 1))
+            if (_culledPagedLODs && ((frameCount - previousHighResUsed) > 1))
             {
-                culledPagedLODs->newHighresRequired.emplace_back(&plod);
+                _culledPagedLODs->newHighresRequired.emplace_back(&plod);
             }
 
             if (child.node)
@@ -155,7 +180,7 @@ void RecordTraversal::apply(const PagedLOD& plod)
                 child.node->accept(*this);
                 return;
             }
-            else if (databasePager)
+            else if (_databasePager)
             {
                 auto priority = rf / cutoff;
                 exchange_if_greater(plod.priority, priority);
@@ -164,7 +189,7 @@ void RecordTraversal::apply(const PagedLOD& plod)
                 if (previousRequestCount == 0)
                 {
                     // we are first request so tell the databasePager about it
-                    databasePager->request(ref_ptr<PagedLOD>(const_cast<PagedLOD*>(&plod)));
+                    _databasePager->request(ref_ptr<PagedLOD>(const_cast<PagedLOD*>(&plod)));
                 }
                 else
                 {
@@ -174,9 +199,9 @@ void RecordTraversal::apply(const PagedLOD& plod)
         }
         else
         {
-            if (culledPagedLODs && ((frameCount - plod.frameHighResLastUsed) <= 1))
+            if (_culledPagedLODs && ((frameCount - plod.frameHighResLastUsed) <= 1))
             {
-                culledPagedLODs->highresCulled.emplace_back(&plod);
+                _culledPagedLODs->highresCulled.emplace_back(&plod);
             }
         }
     }
@@ -202,7 +227,7 @@ void RecordTraversal::apply(const CullGroup& cullGroup)
     // no culling
     cullGroup.traverse(*this);
 #else
-    if (state->intersect(cullGroup.getBound()))
+    if (_state->intersect(cullGroup.getBound()))
     {
         //std::cout<<"Passed node"<<std::endl;
         cullGroup.traverse(*this);
@@ -220,7 +245,7 @@ void RecordTraversal::apply(const CullNode& cullNode)
     // no culling
     cullNode.traverse(*this);
 #else
-    if (state->intersect(cullNode.getBound()))
+    if (_state->intersect(cullNode.getBound()))
     {
         //std::cout<<"Passed node"<<std::endl;
         cullNode.traverse(*this);
@@ -239,58 +264,58 @@ void RecordTraversal::apply(const StateGroup& stateGroup)
     const StateGroup::StateCommands& stateCommands = stateGroup.getStateCommands();
     for (auto& command : stateCommands)
     {
-        state->stateStacks[command->getSlot()].push(command);
+        _state->stateStacks[command->getSlot()].push(command);
     }
-    state->dirty = true;
+    _state->dirty = true;
 
     stateGroup.traverse(*this);
 
     for (auto& command : stateCommands)
     {
-        state->stateStacks[command->getSlot()].pop();
+        _state->stateStacks[command->getSlot()].pop();
     }
-    state->dirty = true;
+    _state->dirty = true;
 }
 
 void RecordTraversal::apply(const MatrixTransform& mt)
 {
     if (mt.getSubgraphRequiresLocalFrustum())
     {
-        state->modelviewMatrixStack.pushAndPreMult(mt.getMatrix());
-        state->pushFrustum();
-        state->dirty = true;
+        _state->modelviewMatrixStack.pushAndPostMult(mt.getMatrix());
+        _state->pushFrustum();
+        _state->dirty = true;
 
         mt.traverse(*this);
 
-        state->modelviewMatrixStack.pop();
-        state->popFrustum();
-        state->dirty = true;
+        _state->modelviewMatrixStack.pop();
+        _state->popFrustum();
+        _state->dirty = true;
     }
     else
     {
-        state->modelviewMatrixStack.pushAndPreMult(mt.getMatrix());
-        state->dirty = true;
+        _state->modelviewMatrixStack.pushAndPostMult(mt.getMatrix());
+        _state->dirty = true;
 
         mt.traverse(*this);
 
-        state->modelviewMatrixStack.pop();
-        state->dirty = true;
+        _state->modelviewMatrixStack.pop();
+        _state->dirty = true;
     }
 }
 
 // Vulkan nodes
 void RecordTraversal::apply(const Commands& commands)
 {
-    state->dispatch();
+    _state->record();
     for (auto& command : commands.getChildren())
     {
-        command->dispatch(*(state->_commandBuffer));
+        command->record(*(_state->_commandBuffer));
     }
 }
 
 void RecordTraversal::apply(const Command& command)
 {
     //    std::cout<<"Visiting Command "<<std::endl;
-    state->dispatch();
-    command.dispatch(*(state->_commandBuffer));
+    _state->record();
+    command.record(*(_state->_commandBuffer));
 }

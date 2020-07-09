@@ -41,19 +41,27 @@ namespace vsg
             _width(0),
             _height(0),
             _data(nullptr) {}
-        Array2D(std::uint32_t width, std::uint32_t height, value_type* data) :
+
+        Array2D(std::uint32_t width, std::uint32_t height, Layout layout = {}) :
+            Data(layout),
             _width(width),
             _height(height),
-            _data(data) {}
-        Array2D(std::uint32_t width, std::uint32_t height, value_type* data, Layout layout) :
+            _data(new value_type[static_cast<std::size_t>(width) * height]) {}
+
+        Array2D(std::uint32_t width, std::uint32_t height, value_type* data, Layout layout = {}) :
             Data(layout),
             _width(width),
             _height(height),
             _data(data) {}
-        Array2D(std::uint32_t width, std::uint32_t height) :
+
+        Array2D(std::uint32_t width, std::uint32_t height, const value_type& value, Layout layout = {}) :
+            Data(layout),
             _width(width),
             _height(height),
-            _data(new value_type[static_cast<std::size_t>(width) * height]) {}
+            _data(new value_type[static_cast<std::size_t>(width) * height])
+        {
+            for (auto& v : *this) v = value;
+        }
 
         template<typename... Args>
         static ref_ptr<Array2D> create(Args... args)
@@ -104,8 +112,10 @@ namespace vsg
             Data::write(output);
             output.writeValue<std::uint32_t>("Width", _width);
             output.writeValue<std::uint32_t>("Height", _height);
+
             output.writePropertyName("Data");
             output.write(valueCount(), _data);
+            output.writeEndOfLine();
         }
 
         std::size_t size() const { return (_layout.maxNumMipmaps <= 1) ? static_cast<std::size_t>(_width) * _height : computeValueCountIncludingMipmaps(_width, _height, 1, _layout.maxNumMipmaps); }
@@ -150,6 +160,8 @@ namespace vsg
 
         void* dataPointer(std::size_t i) override { return _data + i; }
         const void* dataPointer(std::size_t i) const override { return _data + i; }
+
+        std::uint32_t dimensions() const override { return 2; }
 
         std::uint32_t width() const override { return _width; }
         std::uint32_t height() const override { return _height; }
@@ -207,13 +219,25 @@ namespace vsg
     VSG_array2D(dvec3Array2D, dvec3);
     VSG_array2D(dvec4Array2D, dvec4);
 
+    VSG_array2D(bvec2Array2D, bvec2);
+    VSG_array2D(bvec3Array2D, bvec3);
+    VSG_array2D(bvec4Array2D, bvec4);
+
     VSG_array2D(ubvec2Array2D, ubvec2);
     VSG_array2D(ubvec3Array2D, ubvec3);
     VSG_array2D(ubvec4Array2D, ubvec4);
 
+    VSG_array2D(svec2Array2D, svec2);
+    VSG_array2D(svec3Array2D, svec3);
+    VSG_array2D(svec4Array2D, svec4);
+
     VSG_array2D(usvec2Array2D, usvec2);
     VSG_array2D(usvec3Array2D, usvec3);
     VSG_array2D(usvec4Array2D, usvec4);
+
+    VSG_array2D(ivec2Array2D, ivec2);
+    VSG_array2D(ivec3Array2D, ivec3);
+    VSG_array2D(ivec4Array2D, ivec4);
 
     VSG_array2D(uivec2Array2D, uivec2);
     VSG_array2D(uivec3Array2D, uivec3);

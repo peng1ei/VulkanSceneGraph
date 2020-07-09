@@ -12,7 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include <vsg/vk/Command.h>
+#include <vsg/commands/Command.h>
 
 #include <vsg/viewer/Window.h>
 
@@ -33,7 +33,7 @@ namespace vsg
             _extent2D = window->extent2D();
         }
 
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
     };
 
 } // namespace vsg

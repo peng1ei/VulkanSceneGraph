@@ -43,7 +43,7 @@ ref_ptr<Object> vsg::read(const Path& filename, ref_ptr<const Options> options)
     {
         auto& ot = options->objectCache->getObjectTimepoint(filename, options);
 
-        std::lock_guard<std::mutex> guard(ot.mutex);
+        std::scoped_lock<std::mutex> guard(ot.mutex);
         if (ot.object) return ot.object;
 
         ot.object = read_file();
@@ -94,7 +94,7 @@ PathObjects vsg::read(const Paths& filenames, ref_ptr<const Options> options)
         };
 
         // use latch to synchronize this thread with the file reading threads
-        ref_ptr<Latch> latch(new Latch(filenames.size()));
+        auto latch = Latch::create(static_cast<int>(filenames.size()));
 
         // add operations
         for (auto& [filename, object] : entries)

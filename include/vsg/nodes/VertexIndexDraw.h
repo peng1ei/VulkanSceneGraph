@@ -12,13 +12,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include <vsg/commands/Command.h>
 #include <vsg/nodes/Node.h>
-
 #include <vsg/traversals/CompileTraversal.h>
 #include <vsg/vk/BufferData.h>
-#include <vsg/vk/Command.h>
-
-#define GEOMETRY_AS_COMMAND
 
 namespace vsg
 {
@@ -32,7 +29,7 @@ namespace vsg
         void write(Output& output) const override;
 
         void compile(Context& context) override;
-        void dispatch(CommandBuffer& commandBuffer) const override;
+        void record(CommandBuffer& commandBuffer) const override;
 
         // vkCmdDrawIndexed settings
         // vkCmdDrawIndexed(commandBuffer, indexCount, instanceCount, firstIndex, vertexOffset, firstInstance);
@@ -42,7 +39,7 @@ namespace vsg
         uint32_t vertexOffset = 0;
         uint32_t firstInstance = 0;
 
-        uint32_t firstBinding = 0; // TODO need to decide whether this needs to be serialized/per device
+        uint32_t firstBinding = 0;
         DataList arrays;
         ref_ptr<Data> indices;
 

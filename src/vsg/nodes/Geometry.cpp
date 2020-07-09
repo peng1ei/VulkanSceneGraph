@@ -10,19 +10,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include <vsg/vk/BindIndexBuffer.h>
-#include <vsg/vk/BindVertexBuffers.h>
-#include <vsg/vk/BufferData.h>
-#include <vsg/vk/Descriptor.h>
-#include <vsg/vk/DescriptorPool.h>
-#include <vsg/vk/DescriptorSet.h>
-#include <vsg/vk/Draw.h>
-
+#include <vsg/commands/BindIndexBuffer.h>
 #include <vsg/io/ReaderWriter.h>
-
-#include <vsg/traversals/RecordTraversal.h>
-
 #include <vsg/nodes/Geometry.h>
+#include <vsg/traversals/RecordTraversal.h>
 
 using namespace vsg;
 
@@ -46,18 +37,19 @@ void Geometry::read(Input& input)
 {
     Node::read(input);
 
+    input.read("firstBinding", firstBinding);
     arrays.resize(input.readValue<uint32_t>("NumArrays"));
     for (auto& array : arrays)
     {
-        array = input.readObject<Data>("Array");
+        input.readObject("Array", array);
     }
 
-    indices = input.readObject<Data>("Indices");
+    input.readObject("Indices", indices);
 
     commands.resize(input.readValue<uint32_t>("NumCommands"));
     for (auto& command : commands)
     {
-        command = input.readObject<Command>("Command");
+        input.readObject("Command", command);
     }
 }
 
@@ -65,6 +57,7 @@ void Geometry::write(Output& output) const
 {
     Node::write(output);
 
+    output.write("firstBinding", firstBinding);
     output.writeValue<uint32_t>("NumArrays", arrays.size());
     for (auto& array : arrays)
     {
@@ -148,7 +141,7 @@ void Geometry::compile(Context& context)
     }
 }
 
-void Geometry::dispatch(CommandBuffer& commandBuffer) const
+void Geometry::record(CommandBuffer& commandBuffer) const
 {
     auto& vkd = _vulkanData[commandBuffer.deviceID];
 
@@ -163,6 +156,6 @@ void Geometry::dispatch(CommandBuffer& commandBuffer) const
 
     for (auto& command : commands)
     {
-        command->dispatch(commandBuffer);
+        command->record(commandBuffer);
     }
 }

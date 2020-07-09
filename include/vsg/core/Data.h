@@ -13,6 +13,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 </editor-fold> */
 
 #include <vsg/core/Object.h>
+#include <vsg/core/type_name.h>
 
 #include <vulkan/vulkan.h>
 
@@ -27,30 +28,31 @@ namespace vsg
     /** 128 bit block of compressed texel data.*/
     using block128 = uint8_t[16];
 
+    enum Origin : uint8_t
+    {
+        TOP_LEFT = 0,
+        BOTTOM_LEFT = 2
+    };
+
     class VSG_DECLSPEC Data : public Object
     {
     public:
-        /* Layout used for configuring use of mipmaps and block compressed data.
+        /* Layout used for specifying the format of the data, use of mipmaps, block compressed data and origin.
          * Default of no mipmapping and {1,1,1} is uncompressed.
          * A single block (Block64/Block128) is stored as a single value with the Data object. */
         struct Layout
         {
+            VkFormat format = VK_FORMAT_UNDEFINED;
             uint8_t maxNumMipmaps = 0;
             uint8_t blockWidth = 1;
             uint8_t blockHeight = 1;
             uint8_t blockDepth = 1;
+            uint8_t origin = TOP_LEFT; /// Hint for setting up texture coordinates, bit 0 x/width axis, bit 1 y/height axis, bit 2 z/depth axis. Vulkan origin for images is top left, which is denoted as 0 here.
         };
 
         Data() {}
 
-        explicit Data(VkFormat format) :
-            _format(format) {}
-
         explicit Data(Layout layout) :
-            _layout(layout) {}
-
-        Data(VkFormat format, Layout layout) :
-            _format(format),
             _layout(layout) {}
 
         std::size_t sizeofObject() const noexcept override { return sizeof(Data); }
@@ -58,11 +60,22 @@ namespace vsg
         void read(Input& input) override;
         void write(Output& output) const override;
 
-        void setFormat(VkFormat format) { _format = format; }
-        VkFormat getFormat() const { return _format; }
+        /// Deprecated. TODO : need to remove
+        void setFormat(VkFormat format) { _layout.format = format; }
+
+        /// Deprecated. TODO : : need to remove
+        VkFormat getFormat() const { return _layout.format; }
 
         /** Set Layout */
-        void setLayout(Layout layout) { _layout = layout; }
+        void setLayout(Layout layout)
+        {
+            VkFormat previousFormat = _layout.format; // temporary hack to keep applications that call setFormat(..) before setLayout(..) working
+            _layout = layout;
+            if (_layout.format == 0 && previousFormat != 0) _layout.format = previousFormat; // temporary hack to keep existing applications working
+        }
+
+        /** Get the Layout.*/
+        Layout& getLayout() { return _layout; }
 
         /** Get the Layout.*/
         Layout getLayout() const { return _layout; }
@@ -80,6 +93,8 @@ namespace vsg
 
         virtual void* dataRelease() = 0;
 
+        virtual std::uint32_t dimensions() const = 0;
+
         virtual std::uint32_t width() const = 0;
         virtual std::uint32_t height() const = 0;
         virtual std::uint32_t depth() const = 0;
@@ -91,7 +106,10 @@ namespace vsg
     protected:
         virtual ~Data() {}
 
-        VkFormat _format = VK_FORMAT_UNDEFINED;
         Layout _layout;
     };
+    VSG_type_name(vsg::Data);
+
+    using DataList = std::vector<ref_ptr<Data>>;
+
 } // namespace vsg
