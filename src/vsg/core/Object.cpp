@@ -80,6 +80,25 @@ Object::~Object()
     }
 }
 
+void Object::ref() const noexcept
+{
+    _referenceCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+void Object::unref() const noexcept
+{
+    if (_referenceCount.fetch_sub(1, std::memory_order_seq_cst) <= 1) _attemptDelete();
+}
+void Object::unref_nodelete() const noexcept
+{
+    _referenceCount.fetch_sub(1, std::memory_order_seq_cst);
+}
+
+unsigned int Object::referenceCount() const noexcept
+{
+    return _referenceCount.load();
+}
+
 void Object::_attemptDelete() const
 {
     // what should happen when _delete is called on an Object with ref() of zero?  Need to decide whether this buggy application usage should be tested for.

@@ -65,13 +65,10 @@ namespace vsg
         virtual void write(Output& output) const;
 
         // ref counting methods
-        inline void ref() const noexcept { _referenceCount.fetch_add(1, std::memory_order_relaxed); }
-        inline void unref() const noexcept
-        {
-            if (_referenceCount.fetch_sub(1, std::memory_order_seq_cst) <= 1) _attemptDelete();
-        }
-        inline void unref_nodelete() const noexcept { _referenceCount.fetch_sub(1, std::memory_order_seq_cst); }
-        inline unsigned int referenceCount() const noexcept { return _referenceCount.load(); }
+        void ref() const noexcept;
+        void unref() const noexcept;
+        void unref_nodelete() const noexcept;
+        unsigned int referenceCount() const noexcept;
 
         /// meta data access methods
         /// wraps the value with a vsg::Value<T> object and then assigns via setObject(key, vsg::Value<T>)
