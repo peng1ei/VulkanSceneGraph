@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/state/PipelineLayout.h>
 #include <vsg/state/ShaderStage.h>
 #include <vsg/state/StateCommand.h>
+#include <vsg/state/ArrayMapping.h>
 #include <vsg/vk/RenderPass.h>
 
 namespace vsg
@@ -58,6 +59,9 @@ namespace vsg
         uint32_t& getSubpass() { return _subpass; }
         uint32_t getSubpass() const { return _subpass; }
 
+        ArrayMapping* getArrayMapping() { return _arrayMapping; }
+        const ArrayMapping* getArrayMapping() const { return _arrayMapping; }
+
         // compile the Vulkan object, context parameter used for Device
         void compile(Context& context);
 
@@ -94,6 +98,7 @@ namespace vsg
         ShaderStages _shaderStages;
         GraphicsPipelineStates _pipelineStates;
         uint32_t _subpass;
+        ref_ptr<ArrayMapping> _arrayMapping;
         ref_ptr<AllocationCallbacks> _allocator;
     };
     VSG_type_name(vsg::GraphicsPipeline);

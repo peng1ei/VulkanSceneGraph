@@ -141,6 +141,7 @@ ObjectFactory::ObjectFactory()
     VSG_REGISTER_create(vsg::VertexIndexDraw);
 
     // vulkan objects
+    VSG_REGISTER_create(vsg::ArrayMapping);
     VSG_REGISTER_create(vsg::BindGraphicsPipeline);
     VSG_REGISTER_create(vsg::PipelineLayout);
     VSG_REGISTER_create(vsg::GraphicsPipeline);

@@ -57,6 +57,8 @@ void GraphicsPipeline::read(Input& input)
     }
 
     input.read("subpass", _subpass);
+
+    input.readObject("ArrayMapping", _arrayMapping);
 }
 
 void GraphicsPipeline::write(Output& output) const
@@ -78,6 +80,8 @@ void GraphicsPipeline::write(Output& output) const
     }
 
     output.write("subpass", _subpass);
+
+    output.writeObject("ArrayMapping", _arrayMapping.get());
 }
 
 void GraphicsPipeline::compile(Context& context)
