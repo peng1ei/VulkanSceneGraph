@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/core/Array.h>
 #include <vsg/core/Array2D.h>
 #include <vsg/core/Array3D.h>
+#include <vsg/core/ProxyArray.h>
 #include <vsg/core/Value.h>
 
 namespace vsg
@@ -145,6 +146,39 @@ namespace vsg
         virtual void apply(const dmat4Array&);
         virtual void apply(const block64Array&);
         virtual void apply(const block128Array&);
+
+        // ProxyArrays
+        virtual void apply(const ubyteProxyArray&);
+        virtual void apply(const ushortProxyArray&);
+        virtual void apply(const uintProxyArray&);
+        virtual void apply(const floatProxyArray&);
+        virtual void apply(const doubleProxyArray&);
+        virtual void apply(const vec2ProxyArray&);
+        virtual void apply(const vec3ProxyArray&);
+        virtual void apply(const vec4ProxyArray&);
+        virtual void apply(const dvec2ProxyArray&);
+        virtual void apply(const dvec3ProxyArray&);
+        virtual void apply(const dvec4ProxyArray&);
+        virtual void apply(const bvec2ProxyArray&);
+        virtual void apply(const bvec3ProxyArray&);
+        virtual void apply(const bvec4ProxyArray&);
+        virtual void apply(const svec2ProxyArray&);
+        virtual void apply(const svec3ProxyArray&);
+        virtual void apply(const svec4ProxyArray&);
+        virtual void apply(const ivec2ProxyArray&);
+        virtual void apply(const ivec3ProxyArray&);
+        virtual void apply(const ivec4ProxyArray&);
+        virtual void apply(const ubvec2ProxyArray&);
+        virtual void apply(const ubvec3ProxyArray&);
+        virtual void apply(const ubvec4ProxyArray&);
+        virtual void apply(const usvec2ProxyArray&);
+        virtual void apply(const usvec3ProxyArray&);
+        virtual void apply(const usvec4ProxyArray&);
+        virtual void apply(const uivec2ProxyArray&);
+        virtual void apply(const uivec3ProxyArray&);
+        virtual void apply(const uivec4ProxyArray&);
+        virtual void apply(const mat4ProxyArray&);
+        virtual void apply(const dmat4ProxyArray&);
 
         // Array2Ds
         virtual void apply(const ubyteArray2D&);

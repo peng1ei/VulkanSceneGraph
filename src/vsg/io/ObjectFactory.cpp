@@ -85,6 +85,30 @@ ObjectFactory::ObjectFactory()
     VSG_REGISTER_new(vsg::block128Array);
     VSG_REGISTER_new(vsg::materialArray);
 
+    // proxy arrays
+    VSG_REGISTER_new(vsg::ubyteProxyArray);
+    VSG_REGISTER_new(vsg::ushortProxyArray);
+    VSG_REGISTER_new(vsg::uintProxyArray);
+    VSG_REGISTER_new(vsg::floatProxyArray);
+    VSG_REGISTER_new(vsg::doubleProxyArray);
+    VSG_REGISTER_new(vsg::vec2ProxyArray);
+    VSG_REGISTER_new(vsg::vec3ProxyArray);
+    VSG_REGISTER_new(vsg::vec4ProxyArray);
+    VSG_REGISTER_new(vsg::dvec2ProxyArray);
+    VSG_REGISTER_new(vsg::dvec3ProxyArray);
+    VSG_REGISTER_new(vsg::dvec4ProxyArray);
+    VSG_REGISTER_new(vsg::ubvec2ProxyArray);
+    VSG_REGISTER_new(vsg::ubvec3ProxyArray);
+    VSG_REGISTER_new(vsg::ubvec4ProxyArray);
+    VSG_REGISTER_new(vsg::usvec2ProxyArray);
+    VSG_REGISTER_new(vsg::usvec3ProxyArray);
+    VSG_REGISTER_new(vsg::usvec4ProxyArray);
+    VSG_REGISTER_new(vsg::uivec2ProxyArray);
+    VSG_REGISTER_new(vsg::uivec3ProxyArray);
+    VSG_REGISTER_new(vsg::uivec4ProxyArray);
+    VSG_REGISTER_new(vsg::mat4ProxyArray);
+    VSG_REGISTER_new(vsg::dmat4ProxyArray);
+
     // array2Ds
     VSG_REGISTER_new(vsg::ubyteArray2D);
     VSG_REGISTER_new(vsg::ushortArray2D);

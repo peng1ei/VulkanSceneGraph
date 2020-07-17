@@ -203,6 +203,136 @@ void Visitor::apply(block128Array& value)
     apply(static_cast<Data&>(value));
 }
 
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ProxyArrays
+//
+void Visitor::apply(ubyteProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ushortProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(uintProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(floatProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(doubleProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(vec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(vec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(vec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(dvec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(dvec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(dvec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(bvec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(bvec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(bvec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(svec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(svec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(svec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ivec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ivec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ivec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ubvec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ubvec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(ubvec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(usvec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(usvec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(usvec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(uivec2ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(uivec3ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(uivec4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(mat4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+void Visitor::apply(dmat4ProxyArray& value)
+{
+    apply(static_cast<Data&>(value));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 // Array2Ds

@@ -39,7 +39,7 @@ namespace vsg
         bool operator!=(stride_iterator rhs) const { return ptr != rhs.ptr; }
 
         value_type& operator*() { return *reinterpret_cast<value_type*>(ptr); }
-        //value_type* operator->() { return reinterpret_cast<value_type*>(ptr); }
+        value_type* operator->() { return reinterpret_cast<value_type*>(ptr); }
     };
 
     #define VSG_ProxyArray(N, T) \
@@ -82,8 +82,6 @@ namespace vsg
 
         void read(Input& input) override
         {
-            std::size_t original_total_size = size();
-
             Data::read(input);
 
             uint32_t offset;
@@ -193,7 +191,6 @@ namespace vsg
 
         ref_ptr<Data> _storage;
     };
-
 
     VSG_ProxyArray(ubyteProxyArray, std::uint8_t);
     VSG_ProxyArray(ushortProxyArray, std::uint16_t);

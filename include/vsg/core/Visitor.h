@@ -15,6 +15,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/core/Array.h>
 #include <vsg/core/Array2D.h>
 #include <vsg/core/Array3D.h>
+#include <vsg/core/ProxyArray.h>
 #include <vsg/core/Value.h>
 
 namespace vsg
@@ -145,6 +146,39 @@ namespace vsg
         virtual void apply(dmat4Array&);
         virtual void apply(block64Array&);
         virtual void apply(block128Array&);
+
+        // ProxyArrays
+        virtual void apply(ubyteProxyArray&);
+        virtual void apply(ushortProxyArray&);
+        virtual void apply(uintProxyArray&);
+        virtual void apply(floatProxyArray&);
+        virtual void apply(doubleProxyArray&);
+        virtual void apply(vec2ProxyArray&);
+        virtual void apply(vec3ProxyArray&);
+        virtual void apply(vec4ProxyArray&);
+        virtual void apply(dvec2ProxyArray&);
+        virtual void apply(dvec3ProxyArray&);
+        virtual void apply(dvec4ProxyArray&);
+        virtual void apply(bvec2ProxyArray&);
+        virtual void apply(bvec3ProxyArray&);
+        virtual void apply(bvec4ProxyArray&);
+        virtual void apply(svec2ProxyArray&);
+        virtual void apply(svec3ProxyArray&);
+        virtual void apply(svec4ProxyArray&);
+        virtual void apply(ivec2ProxyArray&);
+        virtual void apply(ivec3ProxyArray&);
+        virtual void apply(ivec4ProxyArray&);
+        virtual void apply(ubvec2ProxyArray&);
+        virtual void apply(ubvec3ProxyArray&);
+        virtual void apply(ubvec4ProxyArray&);
+        virtual void apply(usvec2ProxyArray&);
+        virtual void apply(usvec3ProxyArray&);
+        virtual void apply(usvec4ProxyArray&);
+        virtual void apply(uivec2ProxyArray&);
+        virtual void apply(uivec3ProxyArray&);
+        virtual void apply(uivec4ProxyArray&);
+        virtual void apply(mat4ProxyArray&);
+        virtual void apply(dmat4ProxyArray&);
 
         // Array2Ds
         virtual void apply(ubyteArray2D&);
